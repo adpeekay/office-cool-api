@@ -20,26 +20,22 @@ app = FastAPI(
 # -------------------------------------------------------
 
 class CoolingRequest(BaseModel):
-    lat: float = Field(52.205, ge=-90, le=90, description="Latitude")
-    lon: float = Field(0.1218, ge=-180, le=180, description="Longitude")
-
-    floor_area: float = Field(
-        ...,
-        gt=0,
-        description="Floor area in square metres"
+    lat: float = Field(
+        52.205,
+        ge=-90,
+        le=90,
+        description="Latitude (degrees)"
+    )
+    lon: float = Field(
+        0.1218,
+        ge=-180,
+        le=180,
+        description="Longitude (degrees)"
     )
 
-    glazing_type: str = Field(
-        "normal",
-        description="normal | solar_control | cdte_pv"
-    )
-
-    cooling_setpoint: float = Field(
-        24.0,
-        ge=18,
-        le=30,
-        description="Cooling setpoint temperature (°C)"
-    )
+    floor_area: float
+    glazing_type: str = "normal"
+    cooling_setpoint: float = 24.0
 
 
 # -------------------------------------------------------
