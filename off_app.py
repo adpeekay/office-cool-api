@@ -111,5 +111,21 @@ def office_cooling_from_epw(
     glazing_type="normal",
     cooling_setpoint=24.0,
 ):
-    glazing = GLAZING[glazing_type]
+    try:
+        glazing = GLAZING[glazing_type]
+    except KeyError:
+        raise ValueError(f"Invalid glazing_type: {glazing_type}")
 
+    try:
+        # --- existing body of the function ---
+        # (no changes inside the maths yet)
+
+        daily_kwh = cool_kw.resample("D").sum() / 1000
+        annual_kwh = daily_kwh.sum()
+        peak_kw = cool_kw.max()
+
+        return annual_kwh, peak_kw, daily_kwh
+
+    except Exception as e:
+        print("ERROR inside office_cooling_from_epw:", e)
+        raise
