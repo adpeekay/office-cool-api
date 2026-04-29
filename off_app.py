@@ -73,7 +73,8 @@ def solar_geometry(df, lat):
         np.sin(np.deg2rad(lat)) * np.sin(np.deg2rad(decl)) +
         np.cos(np.deg2rad(lat)) * np.cos(np.deg2rad(decl)) * np.cos(np.deg2rad(hra))
     ))
-    alt = np.maximum(alt, 0)
+    alt = np.clip(alt, 0.0, 90.0)
+    alt[np.isnan(alt)] = 0.0
 
     az = np.rad2deg(np.arctan2(
         -np.cos(np.deg2rad(decl)) * np.sin(np.deg2rad(hra)),
