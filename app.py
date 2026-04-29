@@ -20,8 +20,8 @@ app = FastAPI(
 # -------------------------------------------------------
 
 class CoolingRequest(BaseModel):
-    lat: float = Field(..., ge=-90, le=90)
-    lon: float = Field(..., ge=-180, le=180)
+    lat: float = Field(52.205, ge=-90, le=90, description="Latitude")
+    lon: float = Field(0.1218, ge=-180, le=180, description="Longitude")
 
     floor_area: float = Field(
         ...,
