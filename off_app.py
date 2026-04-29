@@ -22,20 +22,42 @@ ORIENTATION = 180  # south facing
 # -------------------------------------------------------
 
 def load_epw(path):
-    df = pd.read_csv(path, skiprows=8, header=None)
-    df.index = pd.date_range(
-        "2020-01-01 00:00",
-        periods=len(df),
-        freq="H"
-    )
-    df = df.rename(columns={
-        6: "DryBulb",
-        13: "DHI",
-        14: "DNI",
-        15: "GHI",
-    })
-    return df[["DryBulb", "GHI", "DNI", "DHI"]]
+    """
+    Robust EPW loader compatible with PVGIS TMY (v5.3)
+    """
 
+    # Read EPW data (EnergyPlus standard)
+    df = pd.read_csv(path, skiprows=8, header=None)
+
+    df.columns = [
+        "Year", "Month", "Day", "Hour", "Minute", "DataSource",
+        "DryBulb", "DewPoint", "RelHum", "Pressure",
+        "ETR", "ETRN", "IRHoriz",
+        "GHI", "DNI", "DHI",
+        "GlobIllum", "DirNormIllum", "DifIllum",
+        "ZenLum", "WindDir", "WindSpd", "TotalSkyCov",
+        "OpaqueSkyCov", "Visibility", "CeilingHeight",
+        "PresentWeatherObs", "PresentWeatherCodes",
+        "PrecipitableWater", "AerosolOptDepth",
+        "SnowDepth", "DaysSinceSnow",
+        "Albedo", "LiquidPrecipDepth", "LiquidPrecipRate"
+    ][:len(df.columns)]
+
+    # EPW hours are 1–24 and represent END of hour
+    df["Hour"] = df["Hour"].clip(1, 24) - 1
+
+    df.index = pd.to_datetime(
+        dict(
+            year=df["Year"],
+            month=df["Month"],
+            day=df["Day"],
+            hour=df["Hour"],
+        ),
+        errors="coerce",
+        utc=True,
+    )
+
+    return df[["DryBulb", "GHI", "DNI", "DHI"]]
 
 # -------------------------------------------------------
 # Solar Geometry (lat now passed in)
