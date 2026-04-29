@@ -73,6 +73,7 @@ def solar_geometry(df, lat):
         np.sin(np.deg2rad(lat)) * np.sin(np.deg2rad(decl)) +
         np.cos(np.deg2rad(lat)) * np.cos(np.deg2rad(decl)) * np.cos(np.deg2rad(hra))
     ))
+    alt = np.asarray(alt)
     alt = np.clip(alt, 0.0, 90.0)
     alt[np.isnan(alt)] = 0.0
 
@@ -112,21 +113,64 @@ def office_cooling_from_epw(
     glazing_type="normal",
     cooling_setpoint=24.0,
 ):
-    try:
-        glazing = GLAZING[glazing_type]
-    except KeyError:
+    # -------------------------------
+    # 1. Validate glazing input
+    # -------------------------------
+    if glazing_type not in GLAZING:
         raise ValueError(f"Invalid glazing_type: {glazing_type}")
 
-    try:
-        # --- existing body of the function ---
-        # (no changes inside the maths yet)
+    glazing = GLAZING[glazing_type]
 
-        daily_kwh = cool_kw.resample("D").sum() / 1000
-        annual_kwh = daily_kwh.sum()
-        peak_kw = cool_kw.max()
+    # -------------------------------
+    # 2. Derived building parameters
+    # -------------------------------
+    glass_area = 0.13 * floor_area   # same assumption as before
+    n_occ = floor_area / 15
 
-        return annual_kwh, peak_kw, daily_kwh
+    internal_gains = (
+        120 * n_occ +
+        8 * floor_area +
+        10 * floor_area
+    )
 
-    except Exception as e:
-        print("ERROR inside office_cooling_from_epw:", e)
-        raise
+    # -------------------------------
+    # 3. Load EPW + solar geometry
+    # -------------------------------
+    df = load_epw(epw_path)
+    df = solar_geometry(df, lat)
+    df = irr_vertical(df)
+
+    # -------------------------------
+    # 4. Hourly cooling calculation
+    # -------------------------------
+    cool_kw = []
+
+    for _, r in df.iterrows():
+        Tout = r["DryBulb"]
+        I = r["I_facade"]
+
+        Q_cond = glazing["U"] * glass_area * max(Tout - cooling_setpoint, 0)
+        Q_solar = glazing["SHGC"] * glass_area * I
+        Q_pv = glazing["pv_eff"] * glass_area * I
+
+        Q_total = internal_gains + Q_cond + Q_solar - Q_pv
+
+        P_cool = max(Q_total / COP_COOL, 0.0)
+        cool_kw.append(P_cool)
+
+    # -------------------------------
+    # 5. Convert to Pandas Series
+    # -------------------------------
+    cool_kw = pd.Series(cool_kw, index=df.index)
+
+    # -------------------------------
+    # 6. Aggregation
+    # -------------------------------
+    daily_kwh = cool_kw.resample("D").sum() / 1000
+    annual_kwh = daily_kwh.sum()
+    peak_kw = cool_kw.max()
+
+    # -------------------------------
+    # 7. Return results
+    # -------------------------------
+    return annual_kwh, peak_kw, daily_kwh
