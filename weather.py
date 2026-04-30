@@ -2,6 +2,15 @@ import requests
 import tempfile
 from pathlib import Path
 
+
+COUNTRY_NORMALISATION = {
+    "GBR": "United Kingdom",
+    "UK": "United Kingdom",
+    "USA": "United States",
+    "US": "United States",
+}
+
+
 EPW_CACHE = {}
 
 def download_epw_from_pvgis(lat: float, lon: float) -> Path:
@@ -39,18 +48,16 @@ def get_epw(lat: float, lon: float) -> Path:
 
     return EPW_CACHE[key]
 
-def get_country_from_epw(epw_path: str) -> str:
-    """
-    Extract country name from EPW header.
-    Falls back to 'Unknown' if parsing fails.
-    """
-    try:
-        with open(epw_path, "r", encoding="utf-8", errors="ignore") as f:
-            first_line = f.readline()
-        parts = first_line.strip().split(",")
-        if parts[0].upper() == "LOCATION" and len(parts) >= 4:
-            return parts[3].strip()
-    except Exception:
-        pass
 
-    return "Unknown"
+def get_country_from_epw(epw_path) -> str:
+    try:
+        epw_path = Path(epw_path)
+        with epw_path.open("r", encoding="utf-8", errors="ignore") as f:
+            line = f.readline()
+        parts = line.strip().split(",")
+        if len(parts) >= 4:
+            raw = parts[3].strip()
+            return COUNTRY_NORMALISATION.get(raw, raw.title())
+    except Exception as e:
+        print("EPW country parse failed:", e)
+        return "Unknown"
