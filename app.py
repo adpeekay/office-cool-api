@@ -137,7 +137,11 @@ def calculate_cooling(req: CoolingRequest):
     # replace this with that logic.
     country = "United Kingdom"
 
+    
+    country = get_country_from_epw(epw_path)
+
     price_info = get_electricity_price_gbp(country)
+
 
     # ----------------------------
     # Build response
