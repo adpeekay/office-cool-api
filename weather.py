@@ -50,22 +50,30 @@ def get_epw(lat: float, lon: float) -> Path:
 
 
 
+
 def get_country_from_epw(epw_path) -> str:
+    """
+    Extract country from EPW header robustly.
+    Tries multiple fields used by PVGIS EPWs.
+    Never raises.
+    """
     try:
         epw_path = Path(epw_path)
-        if not epw_path.exists():
-            return "Unknown"
-
         with epw_path.open("r", encoding="utf-8", errors="ignore") as f:
             line = f.readline()
 
-        parts = line.strip().split(",")
-        if len(parts) >= 4:
-            raw = parts[3].strip()
-            return COUNTRY_NORMALISATION.get(raw, raw.title())
+        parts = [p.strip() for p in line.split(",")]
+
+        if parts[0].upper() != "LOCATION":
+            return "Unknown"
+
+        # Preferred: explicit country field
+        for idx in (3, 2):
+            if len(parts) > idx and parts[idx] and parts[idx] not in ("-", ""):
+                raw = parts[idx]
+                return COUNTRY_NORMALISATION.get(raw, raw.title())
 
     except Exception as e:
         print("EPW country parse failed:", e)
 
     return "Unknown"
-
