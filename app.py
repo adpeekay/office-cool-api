@@ -1,11 +1,19 @@
+
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from weather import get_epw
 from off_app import office_cooling_from_epw
+from electricity_prices import get_electricity_price_gbp
+
+# -------------------------------------------------------
+# Simple in-memory cache
+# -------------------------------------------------------
 
 RESULTS_CACHE = {}
+
 # -------------------------------------------------------
 # FastAPI app
 # -------------------------------------------------------
@@ -17,11 +25,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # OK for now
+    allow_origins=["*"],   # OK for this stage
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # -------------------------------------------------------
 # Request schema
@@ -40,11 +47,15 @@ class CoolingRequest(BaseModel):
         le=180,
         description="Longitude (degrees)"
     )
-
-    floor_area: float = Field(150.0,gt=1.0, description="Office floor area in square meters")
-    glazing_type: str = "normal"
-    cooling_setpoint: float = 24.0
-
+    floor_area: float = Field(
+        150.0,
+        gt=1.0,
+        description="Office floor area (m²)"
+    )
+    cooling_setpoint: float = Field(
+        24.0,
+        description="Cooling setpoint (°C)"
+    )
 
 # -------------------------------------------------------
 # Health check
@@ -53,7 +64,6 @@ class CoolingRequest(BaseModel):
 @app.get("/")
 def health_check():
     return {"status": "ok"}
-
 
 # -------------------------------------------------------
 # Cooling calculation endpoint
@@ -80,7 +90,7 @@ def calculate_cooling(req: CoolingRequest):
     epw_path = get_epw(req.lat, req.lon)
 
     # ----------------------------
-    # Run comparison
+    # Run glazing comparison
     # ----------------------------
     results = {}
 
@@ -98,6 +108,9 @@ def calculate_cooling(req: CoolingRequest):
             "peak_cooling_kw": round(peak_kw, 2),
         }
 
+    # ----------------------------
+    # Relative savings
+    # ----------------------------
     base = results["normal"]["annual_cooling_kwh"]
 
     savings = {
@@ -110,12 +123,41 @@ def calculate_cooling(req: CoolingRequest):
             if base > 0 else 0.0,
     }
 
+    # ---------------------------------------------------
+    # Electricity price (GBP/kWh)
+    #
+    # NOTE:
+    # At this stage, we intentionally use a country-level
+    # price proxy. Country resolution can later be refined
+    # or swapped for EPW metadata if desired.
+    # ---------------------------------------------------
+
+    # TEMPORARY / SIMPLE country handling:
+    # If you already determine country elsewhere,
+    # replace this with that logic.
+    country = "United Kingdom"
+
+    price_info = get_electricity_price_gbp(country)
+
+    # ----------------------------
+    # Build response
+    # ----------------------------
     response = {
-        "location": {"lat": req.lat, "lon": req.lon},
+        "location": {
+            "lat": req.lat,
+            "lon": req.lon,
+            "country": country,
+        },
         "floor_area": req.floor_area,
         "cooling_setpoint": req.cooling_setpoint,
         "results": results,
         "relative_savings": savings,
+        "electricity_price": {
+            "value_gbp_per_kwh": price_info["price_gbp_per_kwh"],
+            "currency": "GBP",
+            "source": price_info["source"],
+            "fallback_used": price_info["fallback_used"],
+        },
     }
 
     # ----------------------------
