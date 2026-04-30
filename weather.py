@@ -49,15 +49,23 @@ def get_epw(lat: float, lon: float) -> Path:
     return EPW_CACHE[key]
 
 
+
 def get_country_from_epw(epw_path) -> str:
     try:
         epw_path = Path(epw_path)
+        if not epw_path.exists():
+            return "Unknown"
+
         with epw_path.open("r", encoding="utf-8", errors="ignore") as f:
             line = f.readline()
+
         parts = line.strip().split(",")
         if len(parts) >= 4:
             raw = parts[3].strip()
             return COUNTRY_NORMALISATION.get(raw, raw.title())
+
     except Exception as e:
         print("EPW country parse failed:", e)
-        return "Unknown"
+
+    return "Unknown"
+
