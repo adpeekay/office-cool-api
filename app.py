@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from weather import get_epw
@@ -12,6 +13,13 @@ RESULTS_CACHE = {}
 app = FastAPI(
     title="Office Cooling API (Trial)",
     version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # OK for now
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
