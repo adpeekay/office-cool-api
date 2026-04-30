@@ -1,3 +1,5 @@
+import csv
+from pvlib.iotools import read_epw
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -6,6 +8,30 @@ from weather import get_epw, get_country_from_epw
 from off_app import office_cooling_from_epw
 from electricity_prices import get_electricity_price_gbp
 
+# -------------------------------------------------------
+# Load country energy data once at startup
+# -------------------------------------------------------
+
+COUNTRY_DATA = {}
+
+with open("countries.txt", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        COUNTRY_DATA[row["iso3"]] = {
+            "country_name": row["country_name"],
+            "grid_intensity_gco2_per_kwh": (
+                float(row["grid_intensity_gco2_per_kwh"])
+                if row["grid_intensity_gco2_per_kwh"] else None
+            ),
+            "electricity_price_usd_per_kwh": (
+                float(row["electricity_price_usd_per_kwh"])
+                if row["electricity_price_usd_per_kwh"] else None
+            ),
+        }
+
+# Global fallback values (used if country data missing)
+GLOBAL_AVG_ELECTRICITY_PRICE_USD = 0.20
+GLOBAL_AVG_GRID_INTENSITY = 450.0  # gCO2 / kWh
 # -------------------------------------------------------
 # Simple in-memory cache
 # -------------------------------------------------------
@@ -90,7 +116,30 @@ def calculate_cooling(req: CoolingRequest):
         # Get EPW
         # ----------------------------
         epw_path = get_epw(req.lat, req.lon)
+        _, meta = read_epw(epw_path)
+        iso3 = meta.get("country")
+        # ---------------------------------------------------
+        # Resolve country data
+        # ---------------------------------------------------
 
+        country = COUNTRY_DATA.get(iso3)
+
+        country_name = (
+        country["country_name"]
+        if country else "Unknown"
+        )
+
+        electricity_price = (
+        country["electricity_price_usd_per_kwh"]
+        if country and country["electricity_price_usd_per_kwh"] is not None
+        else GLOBAL_AVG_ELECTRICITY_PRICE_USD
+        )
+
+        grid_intensity = (
+        country["grid_intensity_gco2_per_kwh"]
+        if country and country["grid_intensity_gco2_per_kwh"] is not None
+        else GLOBAL_AVG_GRID_INTENSITY
+        )
         # ----------------------------
         # Extract country safely
         # ----------------------------
@@ -115,6 +164,9 @@ def calculate_cooling(req: CoolingRequest):
                 cooling_setpoint=req.cooling_setpoint,
             )
 
+            annual_cost_usd = annual_kwh * electricity_price
+            annual_carbon_kg = annual_kwh * grid_intensity / 1000
+
             results[glazing] = {
                 "annual_cooling_kwh": round(annual_kwh, 1),
                 "peak_cooling_kw": round(peak_kw, 2),
@@ -135,21 +187,18 @@ def calculate_cooling(req: CoolingRequest):
             "location": {
                 "lat": req.lat,
                 "lon": req.lon,
-                "country": country,
+                "iso3": iso3,
+                "country": country_name,
             },
-            "floor_area": req.floor_area,
-            "cooling_setpoint": req.cooling_setpoint,
+            "electricity": {
+                "price_usd_per_kwh": electricity_price,
+            },
+            "carbon": {
+                "grid_intensity_gco2_per_kwh": grid_intensity,
+            },
             "results": results,
             "relative_savings": savings,
-            "electricity_price": {
-                "value_gbp_per_kwh": price_info["price_gbp_per_kwh"],
-                "currency": "GBP",
-                "source": price_info["source"],
-                "fallback_used": price_info["fallback_used"],
-            },
         }
-
-        RESULTS_CACHE[cache_key] = response
         return response
 
     except Exception as e:
