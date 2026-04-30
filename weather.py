@@ -39,3 +39,18 @@ def get_epw(lat: float, lon: float) -> Path:
 
     return EPW_CACHE[key]
 
+def get_country_from_epw(epw_path: str) -> str:
+    """
+    Extract country name from EPW header.
+    Falls back to 'Unknown' if parsing fails.
+    """
+    try:
+        with open(epw_path, "r", encoding="utf-8", errors="ignore") as f:
+            first_line = f.readline()
+        parts = first_line.strip().split(",")
+        if parts[0].upper() == "LOCATION" and len(parts) >= 4:
+            return parts[3].strip()
+    except Exception:
+        pass
+
+    return "Unknown"
