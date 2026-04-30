@@ -1,5 +1,3 @@
-
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -25,7 +23,8 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # OK for this stage
+    allow_origins=["https://www.polysolar.co.uk"],
+    allow_credentials=True,   # OK for this stage
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -135,13 +134,15 @@ def calculate_cooling(req: CoolingRequest):
     # TEMPORARY / SIMPLE country handling:
     # If you already determine country elsewhere,
     # replace this with that logic.
-    country = "United Kingdom"
+    # ---------------------------------------------------
+# Derive country from EPW
+# ---------------------------------------------------
 
-    
     country = get_country_from_epw(epw_path)
 
     price_info = get_electricity_price_gbp(country)
 
+    price_info = get_electricity_price_gbp(country)
 
     # ----------------------------
     # Build response
