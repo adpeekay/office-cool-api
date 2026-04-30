@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from weather import get_epw
+from weather import get_epw, get_country_from_epw
 from off_app import office_cooling_from_epw
 from electricity_prices import get_electricity_price_gbp
 
