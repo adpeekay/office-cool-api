@@ -132,13 +132,15 @@ def office_cooling_from_epw(
         8 * floor_area +
         10 * floor_area
     )
-
+    
     # -------------------------------
     # 3. Load EPW + solar geometry
     # -------------------------------
     df = load_epw(epw_path)
     df = solar_geometry(df, lat)
     df = irr_vertical(df)
+    
+    
 
     # -------------------------------
     # 4. Hourly cooling calculation
@@ -162,11 +164,14 @@ def office_cooling_from_epw(
     # 5. Convert to Pandas Series
     # -------------------------------
     cool_kw = pd.Series(cool_kw, index=df.index)
+    
 
     # -------------------------------
     # 6. Aggregation
     # -------------------------------
     daily_kwh = cool_kw.resample("D").sum() / 1000
+    
+
     annual_kwh = daily_kwh.sum()
     peak_kw = cool_kw.max()
 
