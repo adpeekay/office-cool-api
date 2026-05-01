@@ -110,18 +110,29 @@ def health_check():
 # ======================================================
 
 @app.get("/countries")
+
 def list_countries():
     """
-    Return all available countries for the dropdown.
+    Countries for dropdown + representative climate location for map.
     """
-    countries = [
-        {"iso3": iso3, "country_name": row["country_name"]}
-        for iso3, row in COUNTRY_DATA.items()
-    ]
+    countries = []
 
-    # Alphabetical for UI
+    for iso3, row in COUNTRY_DATA.items():
+        if iso3 in COUNTRY_EPW:
+            _, lat, lon = COUNTRY_EPW[iso3]
+        else:
+            lat = lon = None  # graceful fallback
+
+        countries.append({
+            "iso3": iso3,
+            "country_name": row["country_name"],
+            "lat": lat,
+            "lon": lon,
+        })
+
     countries.sort(key=lambda c: c["country_name"])
     return countries
+
 
 # ======================================================
 # Cooling calculation endpoint
