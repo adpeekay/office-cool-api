@@ -9,21 +9,7 @@ from pydantic import BaseModel, Field
 from weather import get_epw
 from off_app import office_cooling_from_epw
 
-# ======================================================
-# Representative EPW per country
-# (climate representative, not political statement)
-# ======================================================
 
-COUNTRY_EPW = {
-    "GBR": ("Cambridge", 52.205, 0.1218),
-    "FRA": ("Paris", 48.8566, 2.3522),
-    "DEU": ("Berlin", 52.52, 13.405),
-    "ESP": ("Madrid", 40.4168, -3.7038),
-    "ITA": ("Rome", 41.9028, 12.4964),
-    "IRL": ("Dublin", 53.3498, -6.2603),
-    "NLD": ("Amsterdam", 52.3676, 4.9041),
-    "USA": ("Chicago", 41.8781, -87.6298),
-}
 
 # ======================================================
 # Load country energy registry (single source of truth)
@@ -43,6 +29,14 @@ with open("countries.txt", encoding="utf-8") as f:
             "electricity_price_usd_per_kwh": (
                 float(row["electricity_price_usd_per_kwh"])
                 if row["electricity_price_usd_per_kwh"] else None
+            ),
+            "lat": (
+                float(row["lat"])
+                if "lat" in row and row["lat"] else None
+            ),
+            "lon": (
+                float(row["lon"])
+                if "lon" in row and row["lon"] else None
             ),
         }
 
@@ -110,28 +104,23 @@ def health_check():
 # ======================================================
 
 @app.get("/countries")
-
 def list_countries():
     """
-    Countries for dropdown + representative climate location for map.
+    Country list for dropdown + map recentering.
     """
     countries = []
 
     for iso3, row in COUNTRY_DATA.items():
-        if iso3 in COUNTRY_EPW:
-            _, lat, lon = COUNTRY_EPW[iso3]
-        else:
-            lat = lon = None  # graceful fallback
-
         countries.append({
             "iso3": iso3,
             "country_name": row["country_name"],
-            "lat": lat,
-            "lon": lon,
+            "lat": row["lat"],
+            "lon": row["lon"],
         })
 
     countries.sort(key=lambda c: c["country_name"])
     return countries
+``
 
 
 # ======================================================
@@ -155,10 +144,17 @@ def calculate_cooling(req: CoolingRequest):
     # 1. Select EPW
     # --------------------------------------------------
 
-    if req.iso3 and req.iso3 in COUNTRY_EPW:
-        _, epw_lat, epw_lon = COUNTRY_EPW[req.iso3]
+    if req.iso3 and req.iso3 in COUNTRY_DATA:
+        country = COUNTRY_DATA[req.iso3]
+        if country["lat"] is not None and country["lon"] is not None:
+            epw_lat = country["lat"]
+            epw_lon = country["lon"]
+        else:
+            epw_lat = req.lat
+            epw_lon = req.lon
     else:
-        epw_lat, epw_lon = req.lat, req.lon
+        epw_lat = req.lat
+        epw_lon = req.lon
 
     try:
         epw_path = get_epw(epw_lat, epw_lon)
