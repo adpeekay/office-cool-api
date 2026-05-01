@@ -60,7 +60,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tighten later if needed
+    allow_origins=["https:www.polysolar.co.uk"],   # tighten later if needed
     allow_methods=["*"],
     allow_headers=["*"],
 )
