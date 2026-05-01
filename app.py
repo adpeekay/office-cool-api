@@ -106,6 +106,24 @@ def health_check():
     return {"status": "ok"}
 
 # ======================================================
+# get countries form countries.txt
+# ======================================================
+
+@app.get("/countries")
+def list_countries():
+    """
+    Return all available countries for the dropdown.
+    """
+    countries = [
+        {"iso3": iso3, "country_name": row["country_name"]}
+        for iso3, row in COUNTRY_DATA.items()
+    ]
+
+    # Alphabetical for UI
+    countries.sort(key=lambda c: c["country_name"])
+    return countries
+
+# ======================================================
 # Cooling calculation endpoint
 # ======================================================
 
