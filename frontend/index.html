@@ -1,181 +1,373 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Cooling & Glazing Comparison</title>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 2rem;
-    }
-
-    h2 {
-      margin-top: 2rem;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: auto;
-    }
-
-    .chart-container {
-      margin-top: 2rem;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1.5rem;
-    }
-
-    th, td {
-      padding: 0.6rem;
-      border-bottom: 1px solid #ddd;
-      text-align: left;
-    }
-
-    th {
-      background: #f5f5f5;
-    }
-
-    .note {
-      margin-top: 1rem;
-      font-size: 0.9rem;
-      color: #555;
-    }
-  </style>
-</head>
-
-<body>
-  <div class="container">
-    <h1>Glazing Cooling Comparison</h1>
-
+<style>#it6j{max-width:800px;margin:0 auto;padding:1.5rem;font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;}#imxs{margin-bottom:0.3rem;}#map{height:400px;margin:1rem 0;border:1px solid #ccc;border-radius:6px;}#iv188{margin-top:1rem;}#calcBtn{padding:0.6rem 1.2rem;font-size:1rem;cursor:pointer;}#i2cof{margin-top:1rem;}#ifdfq{margin-top:0.7rem;}#iwp2y{margin-top:1rem;}#status{margin-top:0.7rem;font-style:italic;}#result{margin-top:1rem;font-size:1.05rem;}#iikiq{margin-top:1.5rem;font-size:0.85rem;color:#555;}#iy5ys{margin-top:1.5rem;}</style>
+<div class="intro text" style="margin-bottom:1.5rem; max-width:800px;">
+  <p>
+    This tool estimates the annual cooling energy, cost and carbon impacts of different glazing technologies for office buildings around the world.
+    Results are based on representative climate conditions for each country using typical values for electricty price (in USD) and grid carbon intensity (kgCO2/kWh).  It also includes energy produced from the PV glass as a reduced energy cost.
+  </p>
+  <p>
+    Steps to success:
+    Select a country and wait a monment - the map will center on that country - that's all!
+    below the map a chart and a table will populate after a while
+    </p>
     <p>
-      Click a location on the map to compare annual cooling burden for
-      different glazing options.
+    What am I looking at?
+    Bar chart - each bar represents a glazing type and the amount energy (kWh) require to cool that office over a year
+    Line graph - shows the cost of that cooling energy from local electricity prices
+    Table - compares Polysolar's PV Glass with Solar Control glass against float glass on CO2 and energycost savings
+    info on the local grid price and carbon intensity is also shown 
     </p>
+</div>
 
-    <h2>Annual cooling energy</h2>
+<!-- ========================= -->
+<!-- CONTROLS -->
+<!-- ========================= -->
 
-    <div class="chart-container">
-      <canvas id="coolingChart"></canvas>
-    </div>
+<div class="control-row">
+  <label for="countrySelect"><strong>Country</strong></label>
+  <select id="countrySelect">
+    <option value="">Select a country…</option>
+  </select>
+</div>
 
-    <h2>Energy, CO₂ and cost savings</h2>
+<div class="control-row">
+  <label for="floorArea"><strong>Floor area (m²)</strong></label>
+  <input id="floorArea" type="number" value="150" min="1" />
+</div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Glazing option</th>
-          <th>Cooling energy saved</th>
-          <th>CO₂ saved</th>
-          <th>Annual cost saving</th>
-        </tr>
-      </thead>
-      <tbody id="savingsBody"></tbody>
-    </table>
+<div class="control-row">
+  <label for="coolingSetpoint"><strong>Cooling setpoint (°C)</strong></label>
+  <input id="coolingSetpoint" type="number" value="24" step="0.5" />
+</div>
 
-    <p class="note">
-      Cooling results represent a simplified, comparative metric driven by
-      façade solar gains and internal loads. They are intended for relative
-      comparison of glazing options, not absolute HVAC energy prediction.
-    </p>
-  </div>
+<!-- ========================= -->
+<!-- MAP -->
+<!-- ========================= -->
 
-  <script>
-    // === UK default assumptions ===
-    const GRID_CARBON = 0.18;        // kg CO2 per kWh
-    const ELECTRICITY_PRICE = 0.28;  // £ per kWh
+<style> 
+  #map {
+    filter: grayscale(75%) contrast(95%);
+    opacity: 0.8;
+    cursor: default;
+  }
+</style>
+<h2>Select location</h2>
+<div id="map" style="height:400px; margin-bottom:2rem; border:1px solid #ccc;"></div>
 
-    let coolingChart = null;
 
-    // === Call this from your map click handler ===
-    async function fetchCoolingComparison(lat, lon) {
-      const response = await fetch("https://YOUR-API.onrender.com/cooling", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          lat: lat,
-          lon: lon,
-          floor_area: 150,
-          cooling_setpoint: 24
-        })
-      });
+<!-- ========================= -->
+<!-- CHART -->
+<!-- ========================= -->
 
-      const data = await response.json();
-      renderCoolingResults(data);
-    }
+<h2>Annual cooling comparison</h2>
 
-    function renderCoolingResults(data) {
-      const labels = ["Normal glass", "Solar control", "CdTe PV"];
-      const values = [
-        data.results.normal.annual_cooling_kwh,
-        data.results.solar_control.annual_cooling_kwh,
-        data.results.cdte_pv.annual_cooling_kwh
-      ];
+<canvas id="coolingChart" style="max-height: 450px; height: 450px; max-width: 640px; width: 640px;"></canvas>
 
-      const ctx = document.getElementById("coolingChart").getContext("2d");
 
-      if (coolingChart) {
-        coolingChart.destroy();
+<h2>CO₂ and cost savings</h2>
+
+<div id="countryEnergyInfo" style="margin-bottom:1rem; font-size:0.95em;">
+  <strong>Electricity price:</strong>
+  <span id="electricityPrice">–</span> USD/kWh
+  &nbsp;|&nbsp;
+  <strong>Grid intensity:</strong>
+  <span id="gridIntensity">–</span> gCO₂/kWh
+</div>
+
+<div style="display:inline-block; max-width:100%;">
+  <table style="border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="border:1px solid #ccc; padding:10px; white-space:nowrap;">
+          Glazing type
+        </th>
+        <th style="border:1px solid #ccc; padding:10px; white-space:nowrap; text-align:right;">
+          Cooling saved (kWh/year)
+        </th>
+        <th style="border:1px solid #ccc; padding:10px; white-space:nowrap; text-align:right;">
+          CO₂ saved (kg/year)
+        </th>
+        <th style="border:1px solid #ccc; padding:10px; white-space:nowrap; text-align:right;">
+          Cost saved ($/year)
+        </th>
+      </tr>
+    </thead>
+    <tbody id="savingsBody"></tbody>
+  </table>
+</div>
+<div class="outro text" style="margin-bottom:1.5rem; max-width:800px;">
+  <p><br>model makes significant assumptions:<br>
+    10 m2 floor are per person<br>
+    office has no heat loss - we only look at solar gain due to the glazing<br>
+    cooling energy is that needed to reduce solar gain and occupant heat gain in room to a temp setpoint of 24 C<br>
+    PV energy output is included but only as a redcution of grid energy requirements<br>
+    PV energy ouput model is very simple<br>
+    costs do not include any glazing or install cost for any glazing type<br>
+    This model is indicative only</p>
+<!-- ========================= -->
+<!-- LIBRARIES -->
+<!-- ========================= -->
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- ========================= -->
+<!-- APPLICATION SCRIPT -->
+<!-- ========================= -->
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+
+  console.log("✅ App loaded");
+
+  /* =========================
+     DOM ELEMENTS
+     ========================= */
+
+  const countrySelect = document.getElementById("countrySelect");
+  const floorAreaInput = document.getElementById("floorArea");
+  const setpointInput = document.getElementById("coolingSetpoint");
+  const savingsBody = document.getElementById("savingsBody");
+
+  const countryCenters = {};   // ✅ FIX: defined explicitly
+
+  /* =========================
+     MAP INITIALISATION
+     ========================= */
+  const FIXED_ZOOM = 6;
+  
+  const map = L.map("map", {
+    zoomControl: false,
+    dragging: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    boxZoom: false,
+    keyboard: false,
+    touchZoom: false
+  }).setView([52, 0], FIXED_ZOOM);
+
+  map.setMinZoom(FIXED_ZOOM);
+  map.setMaxZoom(FIXED_ZOOM);
+
+  
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors"
+  }).addTo(map);
+
+  let selectedMarker = null;
+
+  /* =========================
+     LOAD COUNTRIES
+     ========================= */
+
+  async function loadCountries() {
+    const res = await fetch("https://office-cool-api.onrender.com/countries");
+    const countries = await res.json();
+
+    countrySelect.innerHTML =
+      '<option value="">Select a country…</option>';
+
+    countries.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.iso3;
+      opt.textContent = c.country_name;
+      countrySelect.appendChild(opt);
+
+      // ✅ store centroids for ALL countries that have them
+      if (c.lat !== null && c.lon !== null) {
+        countryCenters[c.iso3] = [c.lat, c.lon];
+      }
+    });
+
+    console.log("✅ Countries loaded:", countries.length);
+  }
+
+  loadCountries();
+
+  /* =========================
+     COUNTRY CHANGE → MAP + API
+     ========================= */
+
+  countrySelect.addEventListener("change", () => {
+
+    const iso3 = countrySelect.value;
+    if (!iso3) return;
+
+    const coords = countryCenters[iso3];
+
+    // ✅ If centroid exists → recenter map
+    if (coords) {
+      const [lat, lon] = coords;
+
+      map.setView([lat, lon], 6);
+
+      if (selectedMarker) {
+        selectedMarker.setLatLng([lat, lon]);
+      } else {
+        selectedMarker = L.marker([lat, lon]).addTo(map);
       }
 
-      coolingChart = new Chart(ctx, {
-        type: "bar",
+      fetchCoolingComparison(lat, lon);
+
+    } else {
+      // ✅ Centroid missing → still run model via iso3
+      console.warn("No centroid for", iso3);
+      fetchCoolingComparison(null, null);
+    }
+  });
+
+  /* =========================
+     API CALL
+     ========================= */
+
+  async function fetchCoolingComparison(lat, lon) {
+
+    const payload = {
+      iso3: countrySelect.value,
+      floor_area: Number(floorAreaInput.value),
+      cooling_setpoint: Number(setpointInput.value)
+    };
+
+    // Only include lat/lon if supplied
+    if (lat !== null && lon !== null) {
+      payload.lat = lat;
+      payload.lon = lon;
+    }
+
+    const res = await fetch(
+      "https://office-cool-api.onrender.com/cooling",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const data = await res.json();
+
+    renderCountryEnergyInfo(data);
+    renderChart(data);
+    renderSavingsTable(data);
+  }
+
+  /* =========================
+     ENERGY / GRID INFO
+     ========================= */
+
+  function renderCountryEnergyInfo(data) {
+    document.getElementById("electricityPrice").textContent =
+      data.electricity.price_usd_per_kwh.toFixed(3);
+
+    document.getElementById("gridIntensity").textContent =
+      data.carbon.grid_intensity_gco2_per_kwh.toFixed(0);
+  }
+
+  /* =========================
+     CHART
+     ========================= */
+
+  let coolingChart = null;
+
+  function renderChart(data) {
+
+    const kwhValues = [
+      data.results.normal.annual_cooling_kwh,
+      data.results.solar_control.annual_cooling_kwh,
+      data.results.cdte_pv.annual_cooling_kwh
+    ];
+
+    const costValues = kwhValues.map(
+      v => v * data.electricity.price_usd_per_kwh
+    );
+
+    if (coolingChart) coolingChart.destroy();
+
+    coolingChart = new Chart(
+      document.getElementById("coolingChart"),
+      {
         data: {
-          labels: labels,
-          datasets: [{
-            label: "Annual cooling energy (kWh/year)",
-            data: values,
-            backgroundColor: ["#999999", "#4da6ff", "#2ecc71"]
-          }]
+          labels: ["Normal", "Solar control", "Polysolar PV glass"],
+          datasets: [
+            {
+              type: "line",
+              label: "Annual cooling cost ($/year)",
+              data: costValues,
+              yAxisID: "yCost",
+              borderColor: "#e74c3c60",
+              backgroundColor: "#e74c3c60",
+              borderDash: [10,10],
+              pointBackgroundColor: ["#E9795E", "#FFA500", "#3CB371"],
+              pointBorderColor: ["#E9795E", "#FFA500", "#3CB371"],
+              pointRadius: 5,
+              pointStyle: "rectRounded",
+              tension: 0.3,
+              pointHoverRadius: 15,
+              
+            },
+            {
+              type: "bar",
+              label: "Annual cooling energy (kWh/year)",
+              data: kwhValues,
+              yAxisID: "yEnergy",
+              backgroundColor: ["#E3735E90", "#FFA50090", "#3CB37190"],
+            }
+          ]
         },
         options: {
-          responsive: true,
+          responsive: false,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
           scales: {
-            y: { beginAtZero: true }
+            yEnergy: {
+              position: "left",
+              title: { display: true, text: "kWh/year" }
+            },
+            yCost: {
+              position: "right",
+              title: { display: true, text: "$/year" },
+              grid: { drawOnChartArea: false }
+            }
           }
         }
-      });
+      }
+    );
+  }
 
-      renderSavingsTable(data);
-    }
+  /* =========================
+     SAVINGS TABLE
+     ========================= */
 
-    function renderSavingsTable(data) {
-      const base = data.results.normal.annual_cooling_kwh;
+  function renderSavingsTable(data) {
 
-      const scenarios = [
-        { name: "Solar control", kwh: data.results.solar_control.annual_cooling_kwh },
-        { name: "CdTe PV", kwh: data.results.cdte_pv.annual_cooling_kwh }
-      ];
+    savingsBody.innerHTML = "";
 
-      let html = "";
+    const base = data.results.normal.annual_cooling_kwh;
 
-      scenarios.forEach(s => {
-        const delta = base - s.kwh;
-        const co2 = delta * GRID_CARBON;
-        const cost = delta * ELECTRICITY_PRICE;
+    ["solar_control", "cdte_pv"].forEach(key => {
 
-        html += `
-          <tr>
-            <td>${s.name}</td>
-            <td>${delta.toFixed(0)} kWh</td>
-            <td>${co2.toFixed(0)} kg CO₂</td>
-            <td>£${cost.toFixed(0)}</td>
-          </tr>
-        `;
-      });
+      const row = document.createElement("tr");
 
-      document.getElementById("savingsBody").innerHTML = html;
-    }
+      row.innerHTML = `
+        <td style="border:1px solid #ddd; white-space: nowrap;">
+          ${key === "solar_control" ? "Solar control" : "CdTe PV"}
+        </td>
+        <td style="border:1px solid #ddd; text-align:right;white-space: nowrap;">
+          ${(base - data.results[key].annual_cooling_kwh).toFixed(0)}
+        </td>
+        <td style="border:1px solid #ddd; text-align:right;white-space: nowrap;">
+          ${data.relative_savings[key].carbon_kg.toFixed(1)}
+        </td>
+        <td style="border:1px solid #ddd; text-align:right;white-space: nowrap;">
+          ${data.relative_savings[key].cost_usd.toFixed(2)}
+        </td>
+      `;
 
-    // === TEMPORARY TEST CALL (remove once wired to map) ===
-    // Cambridge example
-    fetchCoolingComparison(52.205, 0.1218);
-  </script>
-</body>
-</html>
+
+      savingsBody.appendChild(row);
+    });
+  }
+
+});
+</script>
