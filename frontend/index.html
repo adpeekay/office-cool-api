@@ -1,123 +1,89 @@
-<style>#it6j{max-width:800px;margin:0 auto;padding:1.5rem;font-family:system-ui, -apple-system, Segoe UI, Roboto, sans-serif;}#imxs{margin-bottom:0.3rem;}#map{height:400px;margin:1rem 0;border:1px solid #ccc;border-radius:6px;}#iv188{margin-top:1rem;}#calcBtn{padding:0.6rem 1.2rem;font-size:1rem;cursor:pointer;}#i2cof{margin-top:1rem;}#ifdfq{margin-top:0.7rem;}#iwp2y{margin-top:1rem;}#status{margin-top:0.7rem;font-style:italic;}#result{margin-top:1rem;font-size:1.05rem;}#iikiq{margin-top:1.5rem;font-size:0.85rem;color:#555;}#iy5ys{margin-top:1.5rem;}</style>
-<div class="intro text" style="margin-bottom:1.5rem; max-width:800px;">
-  <p>
-    This tool estimates the annual cooling energy, cost and carbon impacts of different glazing technologies for office buildings around the world.
-    Results are based on representative climate conditions for each country using typical values for electricty price (in USD) and grid carbon intensity (kgCO2/kWh).  It also includes energy produced from the PV glass as a reduced energy cost.
-  </p>
-  <p>
-    Steps to success:
-    Select a country and wait a monment - the map will center on that country - that's all!
-    below the map a chart and a table will populate after a while
-    </p>
-    <p>
-    What am I looking at?
-    Bar chart - each bar represents a glazing type and the amount energy (kWh) require to cool that office over a year
-    Line graph - shows the cost of that cooling energy from local electricity prices
-    Table - compares Polysolar's PV Glass with Solar Control glass against float glass on CO2 and energycost savings
-    info on the local grid price and carbon intensity is also shown 
-    </p>
+<style>#map{filter:grayscale(75%) contrast(95%);opacity:0.8;cursor:default;height:400px;margin:1rem 0;border:1px solid #ccc;border-radius:6px;margin-bottom:2rem;}#i27c{margin-bottom:1.5rem;max-width:800px;}#coolingChart{max-height:450px;height:450px;max-width:640px;width:640px;}#countryEnergyInfo{margin-bottom:1rem;font-size:0.95em;}#ilj34{display:inline-block;max-width:100%;}#iezsg{border-collapse:collapse;}#icwn2{border:1px solid #ccc;padding:10px;white-space:nowrap;}#imbaj{border:1px solid #ccc;padding:10px;white-space:nowrap;text-align:right;}#i3btk{border:1px solid #ccc;padding:10px;white-space:nowrap;text-align:right;}#iyw5h{border:1px solid #ccc;padding:10px;white-space:nowrap;text-align:right;}#ixifg{margin-bottom:1.5rem;max-width:800px;}.control-row.hidden{display: none;}.countrySelect{font-size: 24px;}.loading{cursor: wait !important;}#coolingChart.loading,#savingsBody.loading,#countryEnergyInfo.loading{opacity: 0.4;transition: opacity 0.2s ease;}</style>
+<div id="i27c" class="intro text">
+	<p>
+		This tool estimates the annual cooling energy, cost and carbon impacts of different glazing technologies for office buildings around the world.
+		Results are based on representative climate conditions for each country using typical values for electricty price (in USD) and grid carbon intensity (kgCO2/kWh). It also includes energy produced from the PV glass as a reduced energy cost.
+	</p>
+	<p>
+		Steps to success:
+		Select a country and wait a monment - the map will center on that country - that's all!
+		below the map a chart and a table will populate after a while
+	</p>
+	<p>
+		What am I looking at?
+		Bar chart - each bar represents a glazing type and the amount energy (kWh) require to cool that office over a year
+		Line graph - shows the cost of that cooling energy from local electricity prices
+		Table - compares Polysolar's PV Glass with Solar Control glass against float glass on CO2 and energycost savings
+		info on the local grid price and carbon intensity is also shown
+	</p>
 </div>
-
 <!-- ========================= -->
 <!-- CONTROLS -->
 <!-- ========================= -->
-
-<div class="control-row">
-  <label for="countrySelect"><strong>Country</strong></label>
-  <select id="countrySelect">
-    <option value="">Select a country…</option>
-  </select>
+<div class="countrySelect">
+	<h2>Select location</h2><select id="countrySelect">
+		<option value="">Select a country…</option>
+	</select>
 </div>
-
-<div class="control-row">
-  <label for="floorArea"><strong>Floor area (m²)</strong></label>
-  <input id="floorArea" type="number" value="150" min="1" />
-</div>
-
-<div class="control-row">
-  <label for="coolingSetpoint"><strong>Cooling setpoint (°C)</strong></label>
-  <input id="coolingSetpoint" type="number" value="24" step="0.5" />
-</div>
-
+<div class="control-row hidden"><label for="floorArea"><strong>Floor area (m²)</strong></label><input id="floorArea" type="number" value="150" min="1"></div>
+<div class="control-row hidden"><label for="coolingSetpoint"><strong>Cooling setpoint (°C)</strong></label><input id="coolingSetpoint" type="number" value="24" step="0.5"></div>
 <!-- ========================= -->
 <!-- MAP -->
 <!-- ========================= -->
-
-<style> 
-  #map {
-    filter: grayscale(75%) contrast(95%);
-    opacity: 0.8;
-    cursor: default;
-  }
-</style>
-<h2>Select location</h2>
-<div id="map" style="height:400px; margin-bottom:2rem; border:1px solid #ccc;"></div>
-
-
+<div id="map"></div>
 <!-- ========================= -->
 <!-- CHART -->
 <!-- ========================= -->
-
-<h2>Annual cooling comparison</h2>
-
-<canvas id="coolingChart" style="max-height: 450px; height: 450px; max-width: 640px; width: 640px;"></canvas>
-
-
+<h2>Annual cooling comparison</h2><canvas id="coolingChart"></canvas>
 <h2>CO₂ and cost savings</h2>
-
-<div id="countryEnergyInfo" style="margin-bottom:1rem; font-size:0.95em;">
-  <strong>Electricity price:</strong>
-  <span id="electricityPrice">–</span> USD/kWh
-  &nbsp;|&nbsp;
-  <strong>Grid intensity:</strong>
-  <span id="gridIntensity">–</span> gCO₂/kWh
+<div id="countryEnergyInfo"><strong>Electricity price:</strong><span id="electricityPrice">–</span> USD/kWh
+	&nbsp;|&nbsp;
+	<strong>Grid intensity:</strong><span id="gridIntensity">–</span> gCO₂/kWh
 </div>
-
-<div style="display:inline-block; max-width:100%;">
-  <table style="border-collapse:collapse;">
-    <thead>
-      <tr>
-        <th style="border:1px solid #ccc; padding:10px; white-space:nowrap;">
-          Glazing type
-        </th>
-        <th style="border:1px solid #ccc; padding:10px; white-space:nowrap; text-align:right;">
-          Cooling saved (kWh/year)
-        </th>
-        <th style="border:1px solid #ccc; padding:10px; white-space:nowrap; text-align:right;">
-          CO₂ saved (kg/year)
-        </th>
-        <th style="border:1px solid #ccc; padding:10px; white-space:nowrap; text-align:right;">
-          Cost saved ($/year)
-        </th>
-      </tr>
-    </thead>
-    <tbody id="savingsBody"></tbody>
-  </table>
+<div id="ilj34">
+	<table id="iezsg">
+		<thead>
+			<tr>
+				<th id="icwn2">
+					Glazing type
+				</th>
+				<th id="imbaj">
+					Cooling saved (kWh/year)
+				</th>
+				<th id="i3btk">
+					CO₂ saved (kg/year)
+				</th>
+				<th id="iyw5h">
+					Cost saved ($/year)
+				</th>
+			</tr>
+		</thead>
+		<tbody id="savingsBody">
+			<tr class="row">
+				<td class="cell"></td>
+			</tr>
+		</tbody>
+	</table>
 </div>
-<div class="outro text" style="margin-bottom:1.5rem; max-width:800px;">
-  <p><br>model makes significant assumptions:<br>
-    10 m2 floor are per person<br>
-    office has no heat loss - we only look at solar gain due to the glazing<br>
-    cooling energy is that needed to reduce solar gain and occupant heat gain in room to a temp setpoint of 24 C<br>
-    PV energy output is included but only as a redcution of grid energy requirements<br>
-    PV energy ouput model is very simple<br>
-    costs do not include any glazing or install cost for any glazing type<br>
-    This model is indicative only</p>
-<!-- ========================= -->
-<!-- LIBRARIES -->
-<!-- ========================= -->
-
-<link rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- ========================= -->
-<!-- APPLICATION SCRIPT -->
-<!-- ========================= -->
-
-<script>
+<div id="ixifg" class="outro text">
+	<p><br>model makes significant assumptions:<br>
+		10 m2 floor are per person<br>
+		office has no heat loss - we only look at solar gain due to the glazing<br>
+		cooling energy is that needed to reduce solar gain and occupant heat gain in room to a temp setpoint of 24 C<br>
+		PV energy output is included but only as a redcution of grid energy requirements<br>
+		PV energy ouput model is very simple<br>
+		costs do not include any glazing or install cost for any glazing type<br>
+		This model is indicative only</p>
+	<!-- ========================= -->
+	<!-- LIBRARIES -->
+	<!-- ========================= -->
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<!-- ========================= -->
+	<!-- APPLICATION SCRIPT -->
+	<!-- ========================= -->
+	<script>
 document.addEventListener("DOMContentLoaded", () => {
 
   console.log("✅ App loaded");
@@ -194,7 +160,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const iso3 = countrySelect.value;
     if (!iso3) return;
+    
+    
+    document.getElementById("coolingChart")?.classList.add("loading");
+    document.getElementById("savingsBody")?.classList.add("loading");
+    document.getElementById("countryEnergyInfo")?.classList.add("loading");
 
+    
     const coords = countryCenters[iso3];
 
     // ✅ If centroid exists → recenter map
@@ -250,6 +222,11 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCountryEnergyInfo(data);
     renderChart(data);
     renderSavingsTable(data);
+    
+    document.getElementById("coolingChart")?.classList.remove("loading");
+    document.getElementById("savingsBody")?.classList.remove("loading");
+    document.getElementById("countryEnergyInfo")?.classList.remove("loading");
+
   }
 
   /* =========================
@@ -282,11 +259,10 @@ document.addEventListener("DOMContentLoaded", () => {
       v => v * data.electricity.price_usd_per_kwh
     );
 
-    if (coolingChart) coolingChart.destroy();
+    const ctx = document.getElementById("coolingChart");
 
-    coolingChart = new Chart(
-      document.getElementById("coolingChart"),
-      {
+    if (!coolingChart){
+      coolingChart = new Chart(ctx, {
         data: {
           labels: ["Normal", "Solar control", "Polysolar PV glass"],
           datasets: [
@@ -321,20 +297,25 @@ document.addEventListener("DOMContentLoaded", () => {
           interaction: { mode: "index", intersect: false },
           scales: {
             yEnergy: {
+              min: 5000,
               position: "left",
-              title: { display: true, text: "kWh/year" }
+              title: { display: true, text: "kWh/year" },
+              grid: { drawOnChartArea: false},
             },
             yCost: {
               position: "right",
               title: { display: true, text: "$/year" },
-              grid: { drawOnChartArea: false }
+              grid: { drawOnChartArea: false },
             }
           }
         }
-      }
-    );
+      });
+    return; 
+    }
+    coolingChart.data.datasets[0].data = costValues;
+    coolingChart.data.datasets[1].data = kwhValues;
+    coolingChart.update();
   }
-
   /* =========================
      SAVINGS TABLE
      ========================= */
@@ -371,3 +352,4 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 </script>
+</div>
